@@ -3,9 +3,11 @@
 This class allow to transform SQLAlchemy metadata to the intermediary syntax.
 """
 
-from eralchemy.models import Relation, Column, Table
 import sys
+
 from sqlalchemy.exc import CompileError
+
+from eralchemy.models import Column, Relation, Table
 
 if sys.version_info[0] == 3:
     unicode = str
@@ -16,8 +18,8 @@ def relation_to_intermediary(fk):
     return Relation(
         right_col=format_name(fk.parent.table.fullname),
         left_col=format_name(fk._column_tokens[1]),
-        right_cardinality='?',
-        left_cardinality='*',
+        right_cardinality="?",
+        left_cardinality="*",
     )
 
 
@@ -26,7 +28,7 @@ def format_type(typ):
     try:
         return unicode(typ)
     except CompileError:
-        return 'Null'
+        return "Null"
 
 
 def format_name(name):
@@ -46,15 +48,18 @@ def column_to_intermediary(col, type_formatter=format_type):
 def table_to_intermediary(table):
     """Transform an SQLAlchemy Table object to it's intermediary representation. """
     return Table(
-        name=table.fullname,
-        columns=[column_to_intermediary(col) for col in table.c._data.values()]
+        name=table.fullname, columns=[column_to_intermediary(col) for col in table.c]
     )
 
 
 def metadata_to_intermediary(metadata):
     """ Transforms SQLAlchemy metadata to the intermediary representation. """
     tables = [table_to_intermediary(table) for table in metadata.tables.values()]
-    relationships = [relation_to_intermediary(fk) for table in metadata.tables.values() for fk in table.foreign_keys]
+    relationships = [
+        relation_to_intermediary(fk)
+        for table in metadata.tables.values()
+        for fk in table.foreign_keys
+    ]
     return tables, relationships
 
 
@@ -71,8 +76,8 @@ def name_for_scalar_relationship(base, local_cls, referred_cls, constraint):
 
 def database_to_intermediary(database_uri, schema=None):
     """ Introspect from the database (given the database_uri) to create the intermediary representation. """
-    from sqlalchemy.ext.automap import automap_base
     from sqlalchemy import create_engine
+    from sqlalchemy.ext.automap import automap_base
 
     Base = automap_base()
     engine = create_engine(database_uri)
@@ -80,5 +85,7 @@ def database_to_intermediary(database_uri, schema=None):
         Base.metadata.schema = schema
 
     # reflect the tables
-    Base.prepare(engine, reflect=True, name_for_scalar_relationship=name_for_scalar_relationship)
+    Base.prepare(
+        engine, reflect=True, name_for_scalar_relationship=name_for_scalar_relationship
+    )
     return declarative_to_intermediary(Base)
